@@ -1,129 +1,68 @@
 import axios from 'axios';
-import crypto from 'crypto';
 
 class PortfolioService {
   constructor() {
-    this.binanceApiKey = import.meta.env.VITE_BINANCE_API_KEY;
-    this.binanceApiSecret = import.meta.env.VITE_BINANCE_API_SECRET;
-    this.mexcApiKey = import.meta.env.REACT_APP_MEXC_API_KEY;
-    this.mexcApiSecret = import.meta.env.REACT_APP_MEXC_API_SECRET;
-
-
-    this.binanceBaseUrl = '/binance-api';
-    this.mexcBaseUrl = '/mexc-api';
+    this.baseUrl = 'http://localhost:3000/api'; // URL do servidor proxy
   }
 
-  // Gera assinatura para requisições autenticadas Binance
-  generateBinanceSignature(queryString) {
-    return crypto
-      .createHmac('sha256', this.binanceApiSecret)
-      .update(queryString)
-      .digest('hex');
-  }
-
-  // Gera assinatura para requisições autenticadas MEXC
-  generateMEXCSignature(params) {
-    const sortedKeys = Object.keys(params).sort();
-    const signString = sortedKeys.map(key => `${key}=${params[key]}`).join('&');
-    return crypto
-      .createHmac('sha256', this.mexcApiSecret)
-      .update(signString)
-      .digest('hex');
-  }
-
-  // Busca saldos da Binance
-  async fetchBinanceBalances() {
-    const timestamp = Date.now();
-    const queryString = `timestamp=${timestamp}`;
-    const signature = this.generateBinanceSignature(queryString);
-
+  // Binance API calls
+  async getBinanceBalance() {
     try {
-      const response = await axios.get(`${this.binanceBaseUrl}/api/v3/account`, {
-        headers: {
-          'X-MBX-APIKEY': this.binanceApiKey
-        },
-        params: {
-          timestamp,
-          signature
-        }
-      });
-
-      return response.data.balances
-        .filter(balance => parseFloat(balance.free) > 0 || parseFloat(balance.locked) > 0)
-        .map(balance => ({
-          asset: balance.asset,
-          free: balance.free,
-          locked: balance.locked
-        }));
+      const response = await axios.get(`${this.baseUrl}/binance/balance`);
+      return response.data.balances.filter(
+        b => parseFloat(b.free) > 0 || parseFloat(b.locked) > 0
+      );
     } catch (error) {
-      console.error('Erro ao buscar saldos da Binance:', error.response ? error.response.data : error.message);
+      console.error('Erro ao buscar saldo Binance:', error);
       return [];
     }
   }
 
-  // Busca saldos da MEXC
-  async fetchMEXCBalances() {
-    const timestamp = Date.now();
-    const params = {
-      api_key: this.mexcApiKey,
-      recvWindow: 5000,
-      timestamp
-    };
-
-    const signature = this.generateMEXCSignature(params);
-
+  // MEXC API calls
+  async getMEXCBalance() {
     try {
-      const response = await axios.get(`${this.mexcBaseUrl}/api/v3/account`, {
-        params: {
-          ...params,
-          signature
-        }
-      });
-
-      return response.data.balances
-        .filter(balance => parseFloat(balance.free) > 0 || parseFloat(balance.locked) > 0)
-        .map(balance => ({
-          asset: balance.asset,
-          free: balance.free,
-          locked: balance.locked
-        }));
+      const response = await axios.get(`${this.baseUrl}/mexc/balance`);
+      return response.data.balances.filter(
+        b => parseFloat(b.free) > 0 || parseFloat(b.locked) > 0
+      );
     } catch (error) {
-      console.error('Erro ao buscar saldos da MEXC:', error.response ? error.response.data : error.message);
+      console.error('Erro ao buscar saldo MEXC:', error);
       return [];
     }
   }
 
-  // Busca preços atuais da Binance
-  async fetchBinancePrices() {
+  // Buscar preços atualizados
+  async getBinancePrices() {
     try {
-      const response = await axios.get(`${this.binanceBaseUrl}/api/v3/ticker/price`);
-      return response.data.filter(price => price.symbol.endsWith('USDT'));
+      const response = await axios.get(`${this.baseUrl}/binance/prices`);
+      return response.data;
     } catch (error) {
-      console.error('Erro ao buscar preços da Binance:', error.message);
+      console.error('Erro ao buscar preços Binance:', error);
       return [];
     }
   }
 
-  // Busca preços atuais da MEXC
-  async fetchMEXCPrices() {
+  async getMEXCPrices() {
     try {
-      const response = await axios.get(`${this.mexcBaseUrl}/api/v3/ticker/price`);
-      return response.data.filter(price => price.symbol.endsWith('USDT'));
+      const response = await axios.get(`${this.baseUrl}/mexc/prices`);
+      return response.data;
     } catch (error) {
-      console.error('Erro ao buscar preços da MEXC:', error.message);
+      console.error('Erro ao buscar preços MEXC:', error);
       return [];
     }
   }
 
-  // Métodos existentes mantidos igual ao anterior
+  // Consolidar saldos
   async getConsolidatedBalance() {
     try {
-      const binanceBalances = await this.fetchBinanceBalances();
-      const mexcBalances = await this.fetchMEXCBalances();
+      const [binanceBalance, mexcBalance] = await Promise.allSettled([
+        this.getBinanceBalance(),
+        this.getMEXCBalance()
+      ]);
 
       return {
-        binance: binanceBalances,
-        mexc: mexcBalances
+        binance: binanceBalance.status === 'fulfilled' ? binanceBalance.value : [],
+        mexc: mexcBalance.status === 'fulfilled' ? mexcBalance.value : []
       };
     } catch (error) {
       console.error('Erro ao obter saldos consolidados:', error);
@@ -131,47 +70,149 @@ class PortfolioService {
     }
   }
 
+  // Buscar todos os preços
   async getAllPrices() {
-    try {
-      const binancePrices = await this.fetchBinancePrices();
-      const mexcPrices = await this.fetchMEXCPrices();
+    const [binancePrices, mexcPrices] = await Promise.allSettled([
+      this.getBinancePrices(),
+      this.getMEXCPrices()
+    ]);
 
-      return {
-        binance: binancePrices,
-        mexc: mexcPrices
-      };
-    } catch (error) {
-      console.error('Erro ao obter preços:', error);
-      return { binance: [], mexc: [] };
-    }
+    return {
+      binance: binancePrices.status === 'fulfilled' ? binancePrices.value : [],
+      mexc: mexcPrices.status === 'fulfilled' ? mexcPrices.value : []
+    };
   }
 
   calculatePortfolioValue(balances, prices) {
-    let totalBinance = 0;
-    let totalMEXC = 0;
+    try {
+      let totalBinance = 0;
+      let totalMEXC = 0;
 
-    // Calcular valor na Binance
-    balances.binance.forEach(balance => {
-      const price = prices.binance.find(p => p.symbol === `${balance.asset}USDT`);
-      if (price) {
-        const totalBalance = parseFloat(balance.free) + parseFloat(balance.locked);
-        totalBinance += totalBalance * parseFloat(price.price);
+      // Processar saldos Binance
+      if (balances.binance && prices.binance) {
+        balances.binance.forEach(balance => {
+          const price = prices.binance.find(p => p.symbol === `${balance.asset}USDT`);
+          if (price) {
+            const amount = parseFloat(balance.free) + parseFloat(balance.locked);
+            const value = amount * parseFloat(price.price);
+            
+            // Log detalhado para debug
+            console.log(`Binance Asset: ${balance.asset}, Amount: ${amount}, Price: ${price.price}, Value: ${value}`);
+            
+            totalBinance += value;
+          }
+        });
       }
+
+      // Processar saldos MEXC
+      if (balances.mexc && prices.mexc) {
+        balances.mexc.forEach(balance => {
+          const price = prices.mexc.find(p => p.symbol === `${balance.asset}USDT`);
+          if (price) {
+            const amount = parseFloat(balance.free) + parseFloat(balance.locked);
+            const value = amount * parseFloat(price.price);
+            
+            // Log detalhado para debug
+            console.log(`MEXC Asset: ${balance.asset}, Amount: ${amount}, Price: ${price.price}, Value: ${value}`);
+            
+            totalMEXC += value;
+          }
+        });
+      }
+
+      return {
+        total: totalBinance + totalMEXC,
+        binance: totalBinance,
+        mexc: totalMEXC
+      };
+    } catch (error) {
+      console.error('Erro ao calcular valor do portfólio:', error);
+      return { total: 0, binance: 0, mexc: 0 };
+    }
+  }
+
+  // Método para buscar saldo de futuros
+  async getMEXCFuturesBalance() {
+    try {
+      const response = await axios.get(`${this.baseUrl}/mexc/futures/balance`);
+      
+      console.log('MEXC Futures Balance Full Response:', response.data);
+      
+      // Priorizar campos de saldo de futuros
+      const futuresBalance = 
+        Number(response.data?.totalBalance || 
+        response.data?.availableBalance || 
+        response.data?.unrealizedPnl || 0);
+      
+      console.log('Parsed Futures Balance:', futuresBalance);
+      console.log('Futures Balance Details:', {
+        totalBalance: response.data?.totalBalance,
+        availableBalance: response.data?.availableBalance,
+        frozenBalance: response.data?.frozenBalance,
+        unrealizedPnl: response.data?.unrealizedPnl
+      });
+      
+      return futuresBalance;
+    } catch (error) {
+      console.error('Erro ao buscar saldo de futuros MEXC:', error.response?.data || error.message);
+      return 0; // Retorna 0 em caso de erro
+    }
+  }
+
+  // Métodos adicionais mantidos na íntegra
+  async getBinanceTradeHistory(symbol) {
+    try {
+      const response = await axios.get(`${this.baseUrl}/binance/trades`, {
+        params: { symbol }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao buscar histórico Binance:', error);
+      return [];
+    }
+  }
+
+  async getMEXCTradeHistory(symbol) {
+    try {
+      const response = await axios.get(`${this.baseUrl}/mexc/trades`, {
+        params: { symbol }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao buscar histórico MEXC:', error);
+      return [];
+    }
+  }
+
+  calculateTradeMetrics(trades, currentPrice) {
+    if (!trades.length) return {
+      averagePrice: 0,
+      totalCost: 0,
+      profitLoss: 0,
+      profitLossPercentage: 0
+    };
+
+    let totalQuantity = 0;
+    let totalCost = 0;
+
+    // Calcular preço médio ponderado
+    trades.forEach(trade => {
+      const quantity = parseFloat(trade.qty);
+      const price = parseFloat(trade.price);
+      totalQuantity += quantity;
+      totalCost += quantity * price;
     });
 
-    // Calcular valor na MEXC
-    balances.mexc.forEach(balance => {
-      const price = prices.mexc.find(p => p.symbol === `${balance.asset}USDT`);
-      if (price) {
-        const totalBalance = parseFloat(balance.free) + parseFloat(balance.locked);
-        totalMEXC += totalBalance * parseFloat(price.price);
-      }
-    });
+    const averagePrice = totalCost / totalQuantity;
+    const currentValue = totalQuantity * currentPrice;
+    const profitLoss = currentValue - totalCost;
+    const profitLossPercentage = (profitLoss / totalCost) * 100;
 
     return {
-      total: totalBinance + totalMEXC,
-      binance: totalBinance,
-      mexc: totalMEXC
+      averagePrice,
+      totalCost,
+      profitLoss,
+      profitLossPercentage
     };
   }
 }

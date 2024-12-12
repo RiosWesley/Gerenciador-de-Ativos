@@ -1,4 +1,495 @@
+=== Estrutura de Diret�rios ===
+E:\Users\Wesley\Documents\Gerenciador de Ativos\.vscode
+E:\Users\Wesley\Documents\Gerenciador de Ativos\server
+E:\Users\Wesley\Documents\Gerenciador de Ativos\src
+E:\Users\Wesley\Documents\Gerenciador de Ativos\src\components
+E:\Users\Wesley\Documents\Gerenciador de Ativos\src\services
+E:\Users\Wesley\Documents\Gerenciador de Ativos\src\components\Charts
+E:\Users\Wesley\Documents\Gerenciador de Ativos\src\components\Dashboard
+E:\Users\Wesley\Documents\Gerenciador de Ativos\src\components\Sidebar
 
+=== Conte�do dos Arquivos ===
+
+=== E:\Users\Wesley\Documents\Gerenciador de Ativos\.vscode ===
+
+
+=== E:\Users\Wesley\Documents\Gerenciador de Ativos\server\.env ===
+
+VITE_REACT_APP_BINANCE_API_KEY=BoBgkE7jCc7rlQUsk8H1M222CbeP9TSqpLPgo6DGIOq8XGo7SK2e1OZmDlUETsLC
+VITE_REACT_APP_BINANCE_API_SECRET=mi8HY4FbKPypoaT0XQDth1AqAO7dpWSahrqw8SqVnsIDn2cFm7fC6RwZq12xSSIN
+VITE_REACT_APP_MEXC_API_KEY=mx0vglaYMOKN0hkgBa
+VITE_REACT_APP_MEXC_API_SECRET=213ede477ec2407a9e9bc7b4c9963477
+
+=== E:\Users\Wesley\Documents\Gerenciador de Ativos\server\package.json ===
+
+{
+    "name": "portfolio-api-server",
+    "version": "1.0.0",
+    "type": "module",
+    "scripts": {
+      "start": "node server.js",
+      "dev": "node --watch server.js"
+    },
+    "dependencies": {
+      "axios": "^1.6.2",
+      "cors": "^2.8.5",
+      "dotenv": "^16.3.1",
+      "express": "^4.18.2"
+    }
+  }
+
+=== E:\Users\Wesley\Documents\Gerenciador de Ativos\server\server.js ===
+
+import express from 'express';
+import cors from 'cors';
+import crypto from 'crypto';
+import axios from 'axios';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import * as path from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+dotenv.config({ path: path.join(__dirname, '.env') });
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const config = {
+  binance: {
+    apiKey: process.env.VITE_REACT_APP_BINANCE_API_KEY,
+    apiSecret: process.env.VITE_REACT_APP_BINANCE_API_SECRET,
+    baseUrl: 'https://api.binance.com'
+  },
+  mexc: {
+    apiKey: process.env.VITE_REACT_APP_MEXC_API_KEY,
+    apiSecret: process.env.VITE_REACT_APP_MEXC_API_SECRET,
+    baseUrl: 'https://api.mexc.com'
+  }
+};
+
+// Função para gerar assinatura Binance
+function generateBinanceSignature(queryString, apiSecret) {
+  return crypto
+    .createHmac('sha256', apiSecret)
+    .update(queryString)
+    .digest('hex');
+}
+
+// Função para gerar assinatura MEXC
+function generateMEXCSignature(params, apiSecret) {
+  // Garantir que todos os valores são strings
+  const orderedParams = Object.keys(params)
+    .sort()
+    .reduce((obj, key) => {
+      obj[key] = String(params[key]);
+      return obj;
+    }, {});
+
+  // Criar string de consulta ordenada
+  const queryString = Object.entries(orderedParams)
+    .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+    .join('&');
+
+  // Gerar assinatura HMAC SHA256
+  const signature = crypto
+    .createHmac('sha256', apiSecret)
+    .update(queryString)
+    .digest('hex');
+
+  console.log('Query String para assinatura:', queryString); // Debug
+  console.log('Assinatura gerada:', signature); // Debug
+
+  return { signature, queryString };
+}
+
+// Endpoint para saldo Binance
+app.get('/api/binance/balance', async (req, res) => {
+  try {
+    const timestamp = Date.now();
+    const queryString = `timestamp=${timestamp}`;
+    const signature = generateBinanceSignature(queryString, config.binance.apiSecret);
+
+    console.log('Debug Binance Request:');
+    console.log('API Key:', config.binance.apiKey);
+    console.log('Query String:', queryString);
+    console.log('Signature:', signature);
+
+    const response = await axios({
+      method: 'GET',
+      url: `${config.binance.baseUrl}/api/v3/account?${queryString}&signature=${signature}`,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-MBX-APIKEY': config.binance.apiKey
+      }
+    });
+
+    res.json(response.data);
+  } catch (error) {
+    console.error('Erro Binance:', error.response?.data || error.message);
+    res.status(500).json({
+      error: error.message,
+      details: error.response?.data,
+      requestDetails: {
+        timestamp: Date.now(),
+        apiKeyPresent: !!config.binance.apiKey,
+        apiSecretPresent: !!config.binance.apiSecret
+      }
+    });
+  }
+});
+
+// Endpoint para saldo MEXC
+app.get('/api/mexc/balance', async (req, res) => {
+  try {
+    const timestamp = Date.now();
+    const params = {
+      timestamp,
+      recvWindow: '60000'
+    };
+
+    // Gerar assinatura e queryString
+    const { signature, queryString } = generateMEXCSignature(params, config.mexc.apiSecret);
+
+    console.log('Debug MEXC Request:');
+    console.log('API Key:', config.mexc.apiKey);
+    console.log('Query String:', queryString);
+    console.log('Signature:', signature);
+
+    // Fazer requisição com assinatura
+    const response = await axios({
+      method: 'GET',
+      url: `${config.mexc.baseUrl}/api/v3/account?${queryString}&signature=${signature}`,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-MEXC-APIKEY': config.mexc.apiKey
+      }
+    });
+
+    res.json(response.data);
+  } catch (error) {
+    console.error('Erro MEXC:', error.response?.data || error.message);
+    res.status(500).json({
+      error: error.message,
+      details: error.response?.data,
+      requestDetails: {
+        timestamp: Date.now(),
+        apiKeyPresent: !!config.mexc.apiKey,
+        apiSecretPresent: !!config.mexc.apiSecret
+      }
+    });
+  }
+});
+
+// Endpoint para preços Binance
+app.get('/api/binance/prices', async (req, res) => {
+  try {
+    const response = await axios.get(`${config.binance.baseUrl}/api/v3/ticker/price`);
+    res.json(response.data);
+  } catch (error) {
+    console.error('Erro Binance Prices:', error.response?.data || error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Endpoint para preços MEXC
+app.get('/api/mexc/prices', async (req, res) => {
+  try {
+    const response = await axios.get(`${config.mexc.baseUrl}/api/v3/ticker/price`);
+    res.json(response.data);
+  } catch (error) {
+    console.error('Erro MEXC Prices:', error.response?.data || error.message);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Adicione estes endpoints ao server.js
+
+// Endpoint para histórico de trades Binance
+app.get('/api/binance/trades', async (req, res) => {
+  try {
+    const { symbol } = req.query;
+    const timestamp = Date.now();
+    const queryString = `symbol=${symbol}USDT&timestamp=${timestamp}`;
+    const signature = generateBinanceSignature(queryString, config.binance.apiSecret);
+
+    console.log('Debug Binance Trades Request:');
+    console.log('Symbol:', symbol);
+    console.log('Query String:', queryString);
+
+    const response = await axios({
+      method: 'GET',
+      url: `${config.binance.baseUrl}/api/v3/myTrades?${queryString}&signature=${signature}`,
+      headers: {
+        'X-MBX-APIKEY': config.binance.apiKey
+      }
+    });
+
+    // Processar e formatar os trades
+    const formattedTrades = response.data.map(trade => ({
+      symbol: trade.symbol,
+      id: trade.id,
+      orderId: trade.orderId,
+      price: trade.price,
+      qty: trade.qty,
+      quoteQty: trade.quoteQty,
+      commission: trade.commission,
+      commissionAsset: trade.commissionAsset,
+      time: trade.time,
+      isBuyer: trade.isBuyer,
+      isMaker: trade.isMaker
+    }));
+
+    res.json(formattedTrades);
+  } catch (error) {
+    console.error('Erro ao buscar trades Binance:', error.response?.data || error.message);
+    res.status(500).json({
+      error: error.message,
+      details: error.response?.data
+    });
+  }
+});
+
+// Endpoint para histórico de trades MEXC
+app.get('/api/mexc/trades', async (req, res) => {
+  try {
+    const { symbol } = req.query;
+    const timestamp = Date.now();
+    const params = {
+      symbol: `${symbol}USDT`,
+      timestamp,
+      recvWindow: '60000'
+    };
+
+    const { signature, queryString } = generateMEXCSignature(params, config.mexc.apiSecret);
+
+    console.log('Debug MEXC Trades Request:');
+    console.log('Symbol:', symbol);
+    console.log('Query String:', queryString);
+
+    const response = await axios({
+      method: 'GET',
+      url: `${config.mexc.baseUrl}/api/v3/myTrades?${queryString}&signature=${signature}`,
+      headers: {
+        'X-MEXC-APIKEY': config.mexc.apiKey
+      }
+    });
+
+    // Processar e formatar os trades
+    const formattedTrades = response.data.map(trade => ({
+      symbol: trade.symbol,
+      id: trade.id,
+      orderId: trade.orderId,
+      price: trade.price,
+      qty: trade.qty,
+      quoteQty: trade.quoteQty,
+      commission: trade.commission,
+      commissionAsset: trade.commissionAsset,
+      time: trade.time,
+      isBuyer: trade.isBuyer,
+      isMaker: trade.isMaker
+    }));
+
+    res.json(formattedTrades);
+  } catch (error) {
+    console.error('Erro ao buscar trades MEXC:', error.response?.data || error.message);
+    res.status(500).json({
+      error: error.message,
+      details: error.response?.data
+    });
+  }
+});
+// Endpoint para saldo de futuros MEXC (Usando API de Ativos)
+app.get('/api/mexc/futures/balance', async (req, res) => {
+  try {
+    const timestamp = Date.now();
+    const params = {
+      timestamp,
+      recvWindow: '5000'
+    };
+
+    // Gerar assinatura e queryString
+    const { signature, queryString } = generateMEXCSignature(params, config.mexc.apiSecret);
+
+    console.log('MEXC Futures Assets Request - Raw Params:', params);
+    console.log('MEXC Futures Assets Request - Query String:', queryString);
+    console.log('MEXC Futures Assets Request - Signature:', signature);
+
+    // Usar endpoint de ativos de futuros
+    const response = await axios({
+      method: 'GET',
+      url: `${config.mexc.baseUrl}/api/v1/private/account/assets?${queryString}&signature=${signature}`,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-MEXC-APIKEY': config.mexc.apiKey
+      }
+    });
+
+    console.log('MEXC Futures Assets Full Response:', JSON.stringify(response.data, null, 2));
+
+    // Encontrar o ativo USDT
+    const usdtAsset = response.data.find(asset => asset.currency === 'USDT');
+    
+    if (!usdtAsset) {
+      console.error('Nenhum ativo USDT encontrado');
+      return res.status(400).json({ error: 'Nenhum ativo USDT encontrado' });
+    }
+
+    // Calcular saldo total
+    const totalBalance = parseFloat(usdtAsset.equity || 0);
+    const availableBalance = parseFloat(usdtAsset.availableBalance || 0);
+    const frozenBalance = parseFloat(usdtAsset.frozenBalance || 0);
+    const unrealizedPnl = parseFloat(usdtAsset.unrealized || 0);
+
+    console.log('Detalhes do Saldo de Futuros USDT:', {
+      equity: usdtAsset.equity,
+      availableBalance: usdtAsset.availableBalance,
+      frozenBalance: usdtAsset.frozenBalance,
+      unrealizedPnl: usdtAsset.unrealized
+    });
+
+    res.json({ 
+      totalBalance,
+      availableBalance,
+      frozenBalance,
+      unrealizedPnl,
+      rawData: usdtAsset
+    });
+
+  } catch (error) {
+    console.error('Erro completo ao buscar saldo de futuros:', error);
+    
+    // Log detalhado do erro da API
+    if (error.response) {
+      console.error('Detalhes da resposta de erro:', {
+        status: error.response.status,
+        headers: error.response.headers,
+        data: error.response.data
+      });
+    }
+
+    res.status(500).json({ 
+      error: 'Erro ao buscar dados de futuros', 
+      details: error.message,
+      fullError: error.response?.data 
+    });
+  }
+});
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Servidor rodando na porta ${PORT}`);
+  console.log('Verificando variáveis de ambiente:');
+  console.log('BINANCE_API_KEY:', config.binance.apiKey ? 'Definida' : 'Indefinida');
+  console.log('BINANCE_API_SECRET:', config.binance.apiSecret ? 'Definida' : 'Indefinida');
+  console.log('MEXC_API_KEY:', config.mexc.apiKey ? 'Definida' : 'Indefinida');
+  console.log('MEXC_API_SECRET:', config.mexc.apiSecret ? 'Definida' : 'Indefinida');
+});
+
+=== E:\Users\Wesley\Documents\Gerenciador de Ativos\src\components\Charts\DistributionChart.jsx ===
+
+// src/components/Charts/DistributionChart.jsx
+import React from 'react';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
+
+export const DistributionChart = ({ data }) => {
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+
+  return (
+    <div className="h-64 w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            labelLine={false}
+            outerRadius={80}
+            fill="#8884d8"
+            dataKey="value"
+            label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            ))}
+          </Pie>
+          <Tooltip />
+        </PieChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+export default DistributionChart;
+
+=== E:\Users\Wesley\Documents\Gerenciador de Ativos\src\components\Charts\HistoryChart.jsx ===
+
+// src/components/Charts/HistoryChart.jsx
+import React from 'react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+
+export const HistoryChart = ({ data }) => {
+  return (
+    <div className="h-64 w-full">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart
+          data={data}
+          margin={{
+            top: 5,
+            right: 30,
+            left: 20,
+            bottom: 5,
+          }}
+        >
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="date" />
+          <YAxis />
+          <Tooltip 
+            formatter={(value) => `R$ ${value.toLocaleString('pt-BR', {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            })}`}
+          />
+          <Line
+            type="monotone"
+            dataKey="value"
+            stroke="#0088FE"
+            strokeWidth={2}
+            dot={false}
+            activeDot={{ r: 8 }}
+          />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+};
+
+export default HistoryChart;
+
+=== E:\Users\Wesley\Documents\Gerenciador de Ativos\src\components\Charts\PortfolioCharts.jsx ===
+
+import React from 'react';
+import { DistributionChart } from './DistributionChart';
+import { HistoryChart } from './HistoryChart';
+
+export const PortfolioDetails = ({ distribution, history }) => {
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="bg-white p-6 rounded-xl shadow-md">
+        <h3 className="text-lg font-semibold mb-4">Distribuição do Portfólio</h3>
+        <DistributionChart data={distribution} />
+      </div>
+      <div className="bg-white p-6 rounded-xl shadow-md">
+        <h3 className="text-lg font-semibold mb-4">Histórico de Valor</h3>
+        <HistoryChart data={history} />
+      </div>
+    </div>
+  );
+};
+
+export default PortfolioDetails;
 
 === E:\Users\Wesley\Documents\Gerenciador de Ativos\src\components\Dashboard\AssetsBreakdown.jsx ===
 
@@ -147,6 +638,7 @@ import PortfolioSummary from './PortfolioSummary';
 import AssetsBreakdown from './AssetsBreakdown';
 import PriceHistory from './PriceHistory';
 import PriceAlerts from './PriceAlerts';
+import Investments from './Investments';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('portfolio');
@@ -194,11 +686,10 @@ const Dashboard = () => {
       case 'investments':
         return (
           <div>
-            {/* Aqui será renderizado o componente de Investimentos */}
             <h2 className="text-xl font-semibold text-gray-700 mb-4">
-              Investimentos
+              Análise de Investimentos
             </h2>
-            {/* Placeholder para o componente de Investimentos */}
+            <Investments />
           </div>
         );
 
@@ -282,6 +773,143 @@ const Dashboard = () => {
 
 export default Dashboard;
 
+=== E:\Users\Wesley\Documents\Gerenciador de Ativos\src\components\Dashboard\Investments.jsx ===
+
+// src/components/Dashboard/Investments.jsx
+import React, { useState, useEffect } from 'react';
+import { Loader2, TrendingUp, TrendingDown } from 'lucide-react';
+import TradeAnalysis from './TradeAnalysis.jsx';
+import PortfolioService from '../../services/portfolioService';
+
+const Investments = () => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [summaryData, setSummaryData] = useState({
+    totalInvested: 0,
+    totalValue: 0,
+    totalReturn: 0,
+    totalReturnPercentage: 0
+  });
+
+  useEffect(() => {
+    const fetchInvestmentData = async () => {
+      try {
+        const portfolioService = new PortfolioService();
+        const balances = await portfolioService.getConsolidatedBalance();
+        const prices = await portfolioService.getAllPrices();
+
+        // Calcular valor total atual
+        let totalValue = 0;
+
+        // Processar Binance
+        balances.binance?.forEach(balance => {
+          const price = prices.binance?.find(p => p.symbol === `${balance.asset}USDT`);
+          if (price) {
+            totalValue += (parseFloat(balance.free) + parseFloat(balance.locked)) * parseFloat(price.price);
+          }
+        });
+
+        // Processar MEXC
+        balances.mexc?.forEach(balance => {
+          const price = prices.mexc?.find(p => p.symbol === `${balance.asset}USDT`);
+          if (price) {
+            totalValue += (parseFloat(balance.free) + parseFloat(balance.locked)) * parseFloat(price.price);
+          }
+        });
+
+        // Dados simulados para exemplo - serão substituídos pelos dados reais dos trades
+        const mockData = {
+          totalInvested: totalValue * 0.8, // Simular investimento inicial
+          totalValue: totalValue,
+          totalReturn: totalValue * 0.2,
+          totalReturnPercentage: 20
+        };
+
+        setSummaryData(mockData);
+        setLoading(false);
+      } catch (err) {
+        setError(err.message);
+        setLoading(false);
+      }
+    };
+
+    fetchInvestmentData();
+    const interval = setInterval(fetchInvestmentData, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-red-500 p-4">
+        Erro ao carregar dados: {error}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* Cards de Resumo */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="text-sm text-gray-500">Total Investido</div>
+          <div className="text-2xl font-bold">
+            ${summaryData.totalInvested.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="text-sm text-gray-500">Valor Atual</div>
+          <div className="text-2xl font-bold">
+            ${summaryData.totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="text-sm text-gray-500">Retorno Total</div>
+          <div className={`text-2xl font-bold flex items-center gap-2 ${
+            summaryData.totalReturn >= 0 ? 'text-green-600' : 'text-red-600'
+          }`}>
+            {summaryData.totalReturn >= 0 ? (
+              <TrendingUp className="h-6 w-6" />
+            ) : (
+              <TrendingDown className="h-6 w-6" />
+            )}
+            ${Math.abs(summaryData.totalReturn).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="text-sm text-gray-500">Retorno (%)</div>
+          <div className={`text-2xl font-bold ${
+            summaryData.totalReturnPercentage >= 0 ? 'text-green-600' : 'text-red-600'
+          }`}>
+            {summaryData.totalReturnPercentage >= 0 ? '+' : ''}
+            {summaryData.totalReturnPercentage.toFixed(2)}%
+          </div>
+        </div>
+      </div>
+
+      {/* Análise de Trades */}
+      <section>
+        <h2 className="text-xl font-semibold text-gray-700 mb-4">
+          Análise Detalhada
+        </h2>
+        <TradeAnalysis />
+      </section>
+    </div>
+  );
+};
+
+export default Investments;
+
 === E:\Users\Wesley\Documents\Gerenciador de Ativos\src\components\Dashboard\PortfolioSummary.jsx ===
 
 import React, { useState, useEffect } from 'react';
@@ -295,21 +923,36 @@ const PortfolioSummary = () => {
   const [portfolioData, setPortfolioData] = useState({
     total: 0,
     binance: 0,
-    mexc: 0
+    mexc: 0,
+    futures: 0
   });
 
   // Cores para o gráfico de pizza
-  const COLORS = ['#0088FE', '#00C49F'];
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28'];
 
   useEffect(() => {
     const fetchPortfolioData = async () => {
       try {
         const portfolioService = new PortfolioService();
+        
+        // Buscar saldos e preços
         const balances = await portfolioService.getConsolidatedBalance();
         const prices = await portfolioService.getAllPrices();
+        
+        // Calcular valores das exchanges
         const portfolio = portfolioService.calculatePortfolioValue(balances, prices);
         
-        setPortfolioData(portfolio);
+        // Buscar saldo de futuros separadamente
+        const futuresBalance = await portfolioService.getMEXCFuturesBalance();
+        
+        // Atualizar estado com valores totais
+        setPortfolioData({
+          total: portfolio.total + futuresBalance,
+          binance: portfolio.binance,
+          mexc: portfolio.mexc,
+          futures: futuresBalance
+        });
+        
         setLoading(false);
       } catch (err) {
         setError(err.message);
@@ -324,7 +967,8 @@ const PortfolioSummary = () => {
 
   const chartData = [
     { name: 'Binance', value: portfolioData.binance },
-    { name: 'MEXC', value: portfolioData.mexc }
+    { name: 'MEXC', value: portfolioData.mexc },
+    { name: 'Futuros', value: portfolioData.futures }
   ];
 
   if (loading) {
@@ -378,7 +1022,7 @@ const PortfolioSummary = () => {
             </PieChart>
           </ResponsiveContainer>
         </div>
-        <div className="grid grid-cols-2 gap-2 mt-4">
+        <div className="grid grid-cols-3 gap-2 mt-4">
           <div className="flex items-center">
             <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: COLORS[0] }} />
             <span>Binance</span>
@@ -386,6 +1030,10 @@ const PortfolioSummary = () => {
           <div className="flex items-center">
             <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: COLORS[1] }} />
             <span>MEXC</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: COLORS[2] }} />
+            <span>Futuros</span>
           </div>
         </div>
       </div>
@@ -404,6 +1052,12 @@ const PortfolioSummary = () => {
             <div className="text-sm text-gray-500">MEXC</div>
             <div className="text-xl font-semibold">
               ${portfolioData.mexc.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </div>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500">Futuros MEXC</div>
+            <div className="text-xl font-semibold">
+              ${portfolioData.futures.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
           </div>
         </div>
@@ -706,6 +1360,902 @@ const PriceHistory = () => {
 
 export default PriceHistory;
 
+=== E:\Users\Wesley\Documents\Gerenciador de Ativos\src\components\Dashboard\TradeAnalysis.jsx ===
+
+// src/components/Dashboard/TradeAnalysis.jsx
+import React, { useState, useEffect } from 'react';
+import { Loader2, TrendingUp, TrendingDown, DollarSign, BarChart2 } from 'lucide-react';
+import PortfolioService from '../../services/portfolioService';
+import InvestmentAnalysisService from '../../services/InvestmentAnalysisService';
+
+const TradeAnalysis = () => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [analysisData, setAnalysisData] = useState([]);
+  const [portfolioMetrics, setPortfolioMetrics] = useState(null);
+
+  useEffect(() => {
+    const fetchAndAnalyzeData = async () => {
+      try {
+        const portfolioService = new PortfolioService();
+        const analysisService = new InvestmentAnalysisService();
+        
+        // Buscar dados necessários
+        const balances = await portfolioService.getConsolidatedBalance();
+        const prices = await portfolioService.getAllPrices();
+        const assetsMetrics = [];
+
+        // Processar ativos da Binance
+        for (const balance of balances.binance || []) {
+          if (parseFloat(balance.free) > 0 || parseFloat(balance.locked) > 0) {
+            const currentPrice = prices.binance?.find(p => p.symbol === `${balance.asset}USDT`)?.price;
+            
+            if (currentPrice) {
+              const trades = await portfolioService.getBinanceTradeHistory(balance.asset);
+              const totalHoldings = parseFloat(balance.free) + parseFloat(balance.locked);
+              
+              const analysis = analysisService.calculateInvestmentMetrics(
+                trades,
+                parseFloat(currentPrice),
+                totalHoldings
+              );
+
+              assetsMetrics.push({
+                symbol: balance.asset,
+                exchange: 'Binance',
+                ...analysis
+              });
+            }
+          }
+        }
+
+        // Processar ativos da MEXC
+        for (const balance of balances.mexc || []) {
+          if (parseFloat(balance.free) > 0 || parseFloat(balance.locked) > 0) {
+            const currentPrice = prices.mexc?.find(p => p.symbol === `${balance.asset}USDT`)?.price;
+            
+            if (currentPrice) {
+              const trades = await portfolioService.getMEXCTradeHistory(balance.asset);
+              const totalHoldings = parseFloat(balance.free) + parseFloat(balance.locked);
+              
+              const analysis = analysisService.calculateInvestmentMetrics(
+                trades,
+                parseFloat(currentPrice),
+                totalHoldings
+              );
+
+              assetsMetrics.push({
+                symbol: balance.asset,
+                exchange: 'MEXC',
+                ...analysis
+              });
+            }
+          }
+        }
+
+        // Calcular métricas do portfolio completo
+        const portfolio = analysisService.calculatePortfolioMetrics(assetsMetrics);
+
+        setAnalysisData(assetsMetrics);
+        setPortfolioMetrics(portfolio);
+        setLoading(false);
+      } catch (err) {
+        setError(err.message);
+        setLoading(false);
+      }
+    };
+
+    fetchAndAnalyzeData();
+    const interval = setInterval(fetchAndAnalyzeData, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-red-500 p-4">
+        Erro ao carregar dados: {error}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Portfolio Summary */}
+      {portfolioMetrics && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="flex items-center gap-2 text-gray-600 mb-2">
+              <DollarSign className="h-5 w-5" />
+              <span className="text-sm">Portfolio Total</span>
+            </div>
+            <div className="text-2xl font-bold">
+              ${portfolioMetrics.currentValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </div>
+            <div className="text-sm text-gray-500 mt-1">
+              {portfolioMetrics.assets} ativos
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="flex items-center gap-2 text-gray-600 mb-2">
+              <BarChart2 className="h-5 w-5" />
+              <span className="text-sm">ROI Total</span>
+            </div>
+            <div className={`text-2xl font-bold ${portfolioMetrics.totalRoi >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              {portfolioMetrics.totalRoi >= 0 ? '+' : ''}
+              {portfolioMetrics.totalRoi.toFixed(2)}%
+            </div>
+            <div className="text-sm text-gray-500 mt-1">
+              {portfolioMetrics.numberOfTrades} trades
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="flex items-center gap-2 text-gray-600 mb-2">
+              <TrendingUp className="h-5 w-5" />
+              <span className="text-sm">Lucro Realizado</span>
+            </div>
+            <div className={`text-2xl font-bold ${portfolioMetrics.realizedProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+              ${portfolioMetrics.realizedProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-4">
+            <div className="flex items-center gap-2 text-gray-600 mb-2">
+              <TrendingDown className="h-5 w-5" />
+              <span className="text-sm">Taxas Totais</span>
+            </div>
+            <div className="text-2xl font-bold text-orange-600">
+              ${portfolioMetrics.totalFees.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Asset Analysis */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="p-4 border-b border-gray-200">
+          <h3 className="text-lg font-semibold">Análise por Ativo</h3>
+        </div>
+        <div className="divide-y">
+          {analysisData.map((asset) => (
+            <div key={`${asset.symbol}-${asset.exchange}`} className="p-4 hover:bg-gray-50">
+              <div className="flex justify-between items-start mb-4">
+                <div>
+                  <div className="font-semibold text-lg">{asset.symbol}</div>
+                  <div className="text-sm text-gray-500">{asset.exchange}</div>
+                </div>
+                <div className="text-right">
+                  <div className="font-semibold">
+                    ${asset.currentValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {asset.currentHoldings.toLocaleString('pt-BR', { maximumFractionDigits: 8 })} {asset.symbol}
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {/* Preço Médio */}
+                <div>
+                  <div className="text-sm text-gray-500">Preço Médio de Compra</div>
+                  <div className="font-medium">
+                    ${asset.metrics.averageBuyPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+
+                {/* ROI */}
+                <div>
+                  <div className="text-sm text-gray-500">ROI</div>
+                  <div className={`font-medium ${
+                    asset.metrics.roi >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {asset.metrics.roi >= 0 ? '+' : ''}
+                    {asset.metrics.roi.toFixed(2)}%
+                  </div>
+                </div>
+
+                {/* Lucro/Prejuízo */}
+                <div>
+                  <div className="text-sm text-gray-500">Lucro/Prejuízo Total</div>
+                  <div className={`font-medium flex items-center gap-1 ${
+                    asset.metrics.totalProfit >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {asset.metrics.totalProfit >= 0 ? (
+                      <TrendingUp className="h-4 w-4" />
+                    ) : (
+                      <TrendingDown className="h-4 w-4" />
+                    )}
+                    ${Math.abs(asset.metrics.totalProfit).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+
+                {/* Volume de Trading */}
+                <div>
+                  <div className="text-sm text-gray-500">Volume de Trading</div>
+                  <div className="font-medium">
+                    ${asset.trading.totalSpentBuying.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    {asset.trading.numberOfTrades} trades
+                  </div>
+                </div>
+              </div>
+
+              {/* Detalhes Adicionais */}
+              <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-100">
+                <div>
+                  <div className="text-sm text-gray-500">Faixa de Preço</div>
+                  <div className="text-sm">
+                    <span className="text-green-600">Alta: ${asset.priceRange.highest.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    <br />
+                    <span className="text-red-600">Baixa: ${asset.priceRange.lowest.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-sm text-gray-500">Lucro Realizado</div>
+                  <div className={`text-sm ${
+                    asset.metrics.realizedProfit >= 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    ${asset.metrics.realizedProfit.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </div>
+                </div>
+
+                <div>
+                  <div className="text-sm text-gray-500">Volatilidade</div>
+                  <div className="text-sm">
+                    {asset.metrics.priceVolatility.toFixed(2)}%
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default TradeAnalysis;
+
+=== E:\Users\Wesley\Documents\Gerenciador de Ativos\src\components\Sidebar\Sidebar.jsx ===
+
+import React from 'react';
+import { HomeIcon, ChartBarIcon, CogIcon } from '@heroicons/react/24/outline';
+
+const Sidebar = () => {
+  return (
+    <div className="w-64 bg-white shadow-lg">
+      <div className="p-4">
+        <h1 className="text-xl font-bold">Crypto Portfolio</h1>
+      </div>
+      <nav className="mt-4">
+        <a href="#" className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100">
+          <HomeIcon className="w-5 h-5 mr-2" />
+          Dashboard
+        </a>
+        <a href="#" className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100">
+          <ChartBarIcon className="w-5 h-5 mr-2" />
+          Portfolio
+        </a>
+        <a href="#" className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100">
+          <CogIcon className="w-5 h-5 mr-2" />
+          Configurações
+        </a>
+      </nav>
+    </div>
+  );
+}
+
+export default Sidebar;
+
+=== E:\Users\Wesley\Documents\Gerenciador de Ativos\src\services\binanceService.js ===
+
+// src/services/binanceService.js
+import axios from 'axios';
+
+class BinanceService {
+    constructor(apiKey, apiSecret) {
+        this.apiKey = apiKey;
+        this.apiSecret = apiSecret;
+        this.baseURL = 'https://api.binance.com/api/v3';
+        this.client = axios.create({
+            baseURL: this.baseURL,
+            headers: {
+                'X-MBX-APIKEY': this.apiKey
+            }
+        });
+    }
+
+    /**
+     * Obtém o saldo de todas as moedas da conta
+     * @returns {Promise} Promise com array de saldos
+     */
+    async getAccountBalance() {
+        try {
+            const timestamp = Date.now();
+            const signature = this.generateSignature(`timestamp=${timestamp}`);
+            
+            const response = await this.client.get('/account', {
+                params: {
+                    timestamp,
+                    signature
+                }
+            });
+
+            // Filtra apenas os ativos com saldo > 0
+            return response.data.balances.filter(
+                balance => parseFloat(balance.free) > 0 || parseFloat(balance.locked) > 0
+            );
+        } catch (error) {
+            console.error('Erro ao buscar saldo:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Obtém os preços atuais de todas as moedas
+     * @returns {Promise} Promise com array de preços
+     */
+    async getCurrentPrices() {
+        try {
+            const response = await this.client.get('/ticker/price');
+            return response.data;
+        } catch (error) {
+            console.error('Erro ao buscar preços:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Gera a assinatura para autenticação
+     * @param {string} queryString - String de parâmetros da query
+     * @returns {string} Assinatura HMAC SHA256
+     */
+    generateSignature(queryString) {
+        const crypto = require('crypto');
+        return crypto
+            .createHmac('sha256', this.apiSecret)
+            .update(queryString)
+            .digest('hex');
+    }
+}
+
+export default BinanceService;
+
+=== E:\Users\Wesley\Documents\Gerenciador de Ativos\src\services\InvestmentAnalysisService.js ===
+
+// src/services/investmentAnalysisService.js
+class InvestmentAnalysisService {
+  /**
+   * Calcula métricas detalhadas de investimento para um ativo
+   * @param {Array} trades - Array de trades do ativo
+   * @param {number} currentPrice - Preço atual do ativo
+   * @param {number} currentHoldings - Quantidade atual do ativo
+   * @returns {Object} Métricas calculadas
+   */
+  calculateInvestmentMetrics(trades, currentPrice, currentHoldings) {
+        if (!trades || !Array.isArray(trades)) {
+            console.warn('Trades inválidos:', trades);
+            trades = [];
+        }
+
+        // Organiza trades por data
+        const sortedTrades = [...trades].sort((a, b) => a.time - b.time);
+        
+        let totalBought = 0;         // Quantidade total comprada
+        let totalSpentBuying = 0;    // Total gasto em compras
+        let totalSold = 0;           // Quantidade total vendida
+        let totalGainedSelling = 0;  // Total ganho em vendas
+        let realizedProfit = 0;      // Lucro realizado
+        let totalFees = 0;           // Total de taxas
+        
+        // Arrays para tracking de compras e vendas
+        let buyTrades = [];
+        let sellTrades = [];
+
+        // Primeira passagem: separar compras e vendas
+        sortedTrades.forEach(trade => {
+            const quantity = parseFloat(trade.qty);
+            const price = parseFloat(trade.price);
+            const total = quantity * price;
+            const fee = parseFloat(trade.commission || 0);
+            
+            totalFees += fee;
+
+            if (trade.isBuyer) {
+                buyTrades.push({ quantity, price, total });
+                totalBought += quantity;
+                totalSpentBuying += total;
+            } else {
+                sellTrades.push({ quantity, price, total });
+                totalSold += quantity;
+                totalGainedSelling += total;
+            }
+        });
+
+        // Calcular preço médio ponderado das compras
+        const averageBuyPrice = totalBought > 0 ? totalSpentBuying / totalBought : 0;
+
+        // Calcular lucro realizado usando FIFO
+        let remainingBuyTrades = [...buyTrades];
+        sellTrades.forEach(sell => {
+            let remainingToSell = sell.quantity;
+            
+            while (remainingToSell > 0 && remainingBuyTrades.length > 0) {
+                const buy = remainingBuyTrades[0];
+                const soldQuantity = Math.min(remainingToSell, buy.quantity);
+                
+                // Calcular lucro realizado para esta parte da venda
+                const buyValue = soldQuantity * buy.price;
+                const sellValue = soldQuantity * sell.price;
+                realizedProfit += sellValue - buyValue;
+                
+                // Atualizar quantidades restantes
+                remainingToSell -= soldQuantity;
+                buy.quantity -= soldQuantity;
+                
+                if (buy.quantity === 0) {
+                    remainingBuyTrades.shift();
+                }
+            }
+        });
+
+        // Calcular custos remanescentes para holdings atuais
+        let remainingCost = 0;
+        let remainingQuantity = 0;
+        
+        remainingBuyTrades.forEach(trade => {
+            remainingCost += trade.quantity * trade.price;
+            remainingQuantity += trade.quantity;
+        });
+
+        // Se ainda temos holdings mas não temos trades suficientes,
+        // usar o preço médio de compra para o restante
+        if (currentHoldings > remainingQuantity) {
+            const extraQuantity = currentHoldings - remainingQuantity;
+            remainingCost += extraQuantity * averageBuyPrice;
+            remainingQuantity = currentHoldings;
+        }
+
+        // Calcular preço médio atual
+        const averageCost = remainingQuantity > 0 ? remainingCost / remainingQuantity : averageBuyPrice;
+
+        // Calcular valor e lucro atual
+        const currentValue = currentHoldings * currentPrice;
+        const unrealizedProfit = currentValue - (currentHoldings * averageCost);
+        const totalProfit = realizedProfit + unrealizedProfit;
+        
+        // Calcular ROI
+        const totalInvested = currentHoldings * averageCost;
+        const roi = totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0;
+
+        // Análise de preços
+        const prices = sortedTrades.map(t => parseFloat(t.price));
+        const highestPrice = Math.max(...prices, currentPrice);
+        const lowestPrice = Math.min(...prices);
+        const priceVolatility = lowestPrice > 0 ? ((highestPrice - lowestPrice) / lowestPrice) * 100 : 0;
+
+        // Debug info
+        console.log(`Análise para holdings: ${currentHoldings}`, {
+            totalBought,
+            totalSpentBuying,
+            averageBuyPrice,
+            remainingQuantity,
+            remainingCost,
+            averageCost,
+            currentValue,
+            unrealizedProfit
+        });
+
+        return {
+            currentHoldings,
+            currentValue,
+            metrics: {
+                averageCost,            // Preço médio atual considerando holdings
+                averageBuyPrice,        // Preço médio de todas as compras
+                currentPrice,
+                totalInvested,
+                realizedProfit,
+                unrealizedProfit,
+                totalProfit,
+                roi,
+                priceVolatility
+            },
+            trading: {
+                totalBought,
+                totalSold,
+                totalSpentBuying,
+                totalGainedSelling,
+                totalFees,
+                numberOfTrades: sortedTrades.length,
+                buyTrades: buyTrades.length,
+                sellTrades: sellTrades.length
+            },
+            priceRange: {
+                highest: highestPrice,
+                lowest: lowestPrice,
+                current: currentPrice
+            }
+        };
+    }
+
+  /**
+   * Calcula métricas agregadas do portfolio
+   * @param {Array} assetsMetrics - Array de métricas de cada ativo
+   * @param {number} minValueFilter - Valor mínimo em USD para incluir o ativo
+   * @returns {Object} Métricas agregadas do portfolio
+   */
+  calculatePortfolioMetrics(assetsMetrics, minValueFilter = 5) {
+      // Filtra ativos com valor mínimo
+      const filteredAssets = assetsMetrics.filter(asset => 
+          asset.currentValue >= minValueFilter
+      );
+
+      const portfolio = {
+          totalInvested: 0,
+          currentValue: 0,
+          realizedProfit: 0,
+          unrealizedProfit: 0,
+          totalProfit: 0,
+          totalFees: 0,
+          numberOfTrades: 0,
+          assets: filteredAssets.length
+      };
+
+      filteredAssets.forEach(asset => {
+          portfolio.totalInvested += asset.metrics.totalInvested;
+          portfolio.currentValue += asset.currentValue;
+          portfolio.realizedProfit += asset.metrics.realizedProfit;
+          portfolio.unrealizedProfit += asset.metrics.unrealizedProfit;
+          portfolio.totalProfit += asset.metrics.totalProfit;
+          portfolio.totalFees += asset.trading.totalFees;
+          portfolio.numberOfTrades += asset.trading.numberOfTrades;
+      });
+
+      portfolio.totalRoi = portfolio.totalInvested > 0 
+          ? (portfolio.totalProfit / portfolio.totalInvested) * 100 
+          : 0;
+
+      portfolio.distribution = filteredAssets
+          .map(asset => ({
+              symbol: asset.symbol,
+              percentage: (asset.currentValue / portfolio.currentValue) * 100,
+              value: asset.currentValue
+          }))
+          .sort((a, b) => b.value - a.value);
+
+      return portfolio;
+  }
+}
+
+export default InvestmentAnalysisService;
+
+=== E:\Users\Wesley\Documents\Gerenciador de Ativos\src\services\mexcService.js ===
+
+// src/services/mexcService.js
+import axios from 'axios';
+
+class MEXCService {
+    constructor(apiKey, apiSecret) {
+        this.apiKey = apiKey;
+        this.apiSecret = apiSecret;
+        this.baseURL = 'https://api.mexc.com/api/v3';
+        this.client = axios.create({
+            baseURL: this.baseURL,
+            headers: {
+                'X-MEXC-APIKEY': this.apiKey,
+            }
+        });
+    }
+
+    /**
+     * Obtém o saldo de todas as moedas da conta
+     * @returns {Promise} Promise com array de saldos
+     */
+    async getAccountBalance() {
+        try {
+            const timestamp = Date.now();
+            const signature = this.generateSignature(`timestamp=${timestamp}`);
+            
+            const response = await this.client.get('/account', {
+                params: {
+                    timestamp,
+                    signature,
+                }
+            });
+
+            // Filtra apenas os ativos com saldo > 0
+            return response.data.balances.filter(
+                balance => parseFloat(balance.free) > 0 || parseFloat(balance.locked) > 0
+            );
+        } catch (error) {
+            console.error('Erro ao buscar saldo MEXC:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Obtém os preços atuais de todas as moedas
+     * @returns {Promise} Promise com array de preços
+     */
+    async getCurrentPrices() {
+        try {
+            const response = await this.client.get('/ticker/price');
+            return response.data;
+        } catch (error) {
+            console.error('Erro ao buscar preços MEXC:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Obtém o histórico de trades
+     * @param {string} symbol - Par de trading (ex: 'BTCUSDT')
+     * @param {number} limit - Número de registros (default: 500, max: 1000)
+     * @returns {Promise} Promise com array de trades
+     */
+    async getTradeHistory(symbol, limit = 500) {
+        try {
+            const timestamp = Date.now();
+            const queryString = `symbol=${symbol}&limit=${limit}&timestamp=${timestamp}`;
+            const signature = this.generateSignature(queryString);
+
+            const response = await this.client.get('/myTrades', {
+                params: {
+                    symbol,
+                    limit,
+                    timestamp,
+                    signature,
+                }
+            });
+            
+            return response.data;
+        } catch (error) {
+            console.error('Erro ao buscar histórico de trades MEXC:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * Gera a assinatura para autenticação
+     * @param {string} queryString - String de parâmetros da query
+     * @returns {string} Assinatura HMAC SHA256
+     */
+    generateSignature(queryString) {
+        const crypto = require('crypto');
+        return crypto
+            .createHmac('sha256', this.apiSecret)
+            .update(queryString)
+            .digest('hex');
+    }
+}
+
+export default MEXCService;
+
+=== E:\Users\Wesley\Documents\Gerenciador de Ativos\src\services\portfolioService.js ===
+
+import axios from 'axios';
+
+class PortfolioService {
+  constructor() {
+    this.baseUrl = 'http://localhost:3000/api'; // URL do servidor proxy
+  }
+
+  // Binance API calls
+  async getBinanceBalance() {
+    try {
+      const response = await axios.get(`${this.baseUrl}/binance/balance`);
+      return response.data.balances.filter(
+        b => parseFloat(b.free) > 0 || parseFloat(b.locked) > 0
+      );
+    } catch (error) {
+      console.error('Erro ao buscar saldo Binance:', error);
+      return [];
+    }
+  }
+
+  // MEXC API calls
+  async getMEXCBalance() {
+    try {
+      const response = await axios.get(`${this.baseUrl}/mexc/balance`);
+      return response.data.balances.filter(
+        b => parseFloat(b.free) > 0 || parseFloat(b.locked) > 0
+      );
+    } catch (error) {
+      console.error('Erro ao buscar saldo MEXC:', error);
+      return [];
+    }
+  }
+
+  // Buscar preços atualizados
+  async getBinancePrices() {
+    try {
+      const response = await axios.get(`${this.baseUrl}/binance/prices`);
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao buscar preços Binance:', error);
+      return [];
+    }
+  }
+
+  async getMEXCPrices() {
+    try {
+      const response = await axios.get(`${this.baseUrl}/mexc/prices`);
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao buscar preços MEXC:', error);
+      return [];
+    }
+  }
+
+  // Consolidar saldos
+  async getConsolidatedBalance() {
+    try {
+      const [binanceBalance, mexcBalance] = await Promise.allSettled([
+        this.getBinanceBalance(),
+        this.getMEXCBalance()
+      ]);
+
+      return {
+        binance: binanceBalance.status === 'fulfilled' ? binanceBalance.value : [],
+        mexc: mexcBalance.status === 'fulfilled' ? mexcBalance.value : []
+      };
+    } catch (error) {
+      console.error('Erro ao obter saldos consolidados:', error);
+      return { binance: [], mexc: [] };
+    }
+  }
+
+  // Buscar todos os preços
+  async getAllPrices() {
+    const [binancePrices, mexcPrices] = await Promise.allSettled([
+      this.getBinancePrices(),
+      this.getMEXCPrices()
+    ]);
+
+    return {
+      binance: binancePrices.status === 'fulfilled' ? binancePrices.value : [],
+      mexc: mexcPrices.status === 'fulfilled' ? mexcPrices.value : []
+    };
+  }
+
+  // Calcular valor do portfólio
+  calculatePortfolioValue(balances, prices) {
+    try {
+      let totalBinance = 0;
+      let totalMEXC = 0;
+
+      // Processar saldos Binance
+      if (balances.binance && prices.binance) {
+        balances.binance.forEach(balance => {
+          const price = prices.binance.find(p => p.symbol === `${balance.asset}USDT`);
+          if (price) {
+            const amount = parseFloat(balance.free) + parseFloat(balance.locked);
+            totalBinance += amount * parseFloat(price.price);
+          }
+        });
+      }
+
+      // Processar saldos MEXC
+      if (balances.mexc && prices.mexc) {
+        balances.mexc.forEach(balance => {
+          const price = prices.mexc.find(p => p.symbol === `${balance.asset}USDT`);
+          if (price) {
+            const amount = parseFloat(balance.free) + parseFloat(balance.locked);
+            totalMEXC += amount * parseFloat(price.price);
+          }
+        });
+      }
+
+      return {
+        total: totalBinance + totalMEXC,
+        binance: totalBinance,
+        mexc: totalMEXC
+      };
+    } catch (error) {
+      console.error('Erro ao calcular valor do portfólio:', error);
+      return { total: 0, binance: 0, mexc: 0 };
+    }
+  }
+
+  // Método para buscar saldo de futuros
+  async getMEXCFuturesBalance() {
+    try {
+      const response = await axios.get(`${this.baseUrl}/mexc/futures/balance`);
+      
+      console.log('MEXC Futures Balance Full Response:', response.data);
+      
+      // Priorizar campos de saldo de futuros
+      const futuresBalance = 
+        Number(response.data?.totalBalance || 
+        response.data?.availableBalance || 
+        response.data?.unrealizedPnl || 0);
+      
+      console.log('Parsed Futures Balance:', futuresBalance);
+      console.log('Futures Balance Details:', {
+        totalBalance: response.data?.totalBalance,
+        availableBalance: response.data?.availableBalance,
+        frozenBalance: response.data?.frozenBalance,
+        unrealizedPnl: response.data?.unrealizedPnl
+      });
+      
+      return futuresBalance;
+    } catch (error) {
+      console.error('Erro ao buscar saldo de futuros MEXC:', error.response?.data || error.message);
+      return 0; // Retorna 0 em caso de erro
+    }
+  }
+
+  // Métodos adicionais mantidos na íntegra
+  async getBinanceTradeHistory(symbol) {
+    try {
+      const response = await axios.get(`${this.baseUrl}/binance/trades`, {
+        params: { symbol }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao buscar histórico Binance:', error);
+      return [];
+    }
+  }
+
+  async getMEXCTradeHistory(symbol) {
+    try {
+      const response = await axios.get(`${this.baseUrl}/mexc/trades`, {
+        params: { symbol }
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Erro ao buscar histórico MEXC:', error);
+      return [];
+    }
+  }
+
+  calculateTradeMetrics(trades, currentPrice) {
+    if (!trades.length) return {
+      averagePrice: 0,
+      totalCost: 0,
+      profitLoss: 0,
+      profitLossPercentage: 0
+    };
+
+    let totalQuantity = 0;
+    let totalCost = 0;
+
+    // Calcular preço médio ponderado
+    trades.forEach(trade => {
+      const quantity = parseFloat(trade.qty);
+      const price = parseFloat(trade.price);
+      totalQuantity += quantity;
+      totalCost += quantity * price;
+    });
+
+    const averagePrice = totalCost / totalQuantity;
+    const currentValue = totalQuantity * currentPrice;
+    const profitLoss = currentValue - totalCost;
+    const profitLossPercentage = (profitLoss / totalCost) * 100;
+
+    return {
+      averagePrice,
+      totalCost,
+      profitLoss,
+      profitLossPercentage
+    };
+  }
+}
+
+export default PortfolioService;
+
 === E:\Users\Wesley\Documents\Gerenciador de Ativos\src\App.jsx ===
 
 import React from 'react';
@@ -742,10 +2292,14 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 
 === E:\Users\Wesley\Documents\Gerenciador de Ativos\.env ===
 
-REACT_APP_BINANCE_API_KEY=BoBgkE7jCc7rlQUsk8H1M222CbeP9TSqpLPgo6DGIOq8XGo7SK2e1OZmDlUETsLC
-REACT_APP_BINANCE_API_SECRET=mi8HY4FbKPypoaT0XQDth1AqAO7dpWSahrqw8SqVnsIDn2cFm7fC6RwZq12xSSIN
-REACT_APP_MEXC_API_KEY=mx0vglpHfMQW2oRlym
-REACT_APP_MEXC_API_SECRET=acd93ef29eec4d95bbd760658930547b
+VITE_BINANCE_API_KEY=BoBgkE7jCc7rlQUsk8H1M222CbeP9TSqpLPgo6DGIOq8XGo7SK2e1OZmDlUETsLC
+VITE_BINANCE_API_SECRET=mi8HY4FbKPypoaT0XQDth1AqAO7dpWSahrqw8SqVnsIDn2cFm7fC6RwZq12xSSIN
+VITE_MEXC_API_KEY=mx0vglpHfMQW2oRlym
+VITE_MEXC_API_SECRET=acd93ef29eec4d95bbd760658930547b
+
+=== E:\Users\Wesley\Documents\Gerenciador de Ativos\.gitignore ===
+
+node_modules
 
 === E:\Users\Wesley\Documents\Gerenciador de Ativos\index.html ===
 
@@ -777,7 +2331,12 @@ REACT_APP_MEXC_API_SECRET=acd93ef29eec4d95bbd760658930547b
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",
-    "axios": "^1.6.2",
+    "axios": "^1.7.9",
+    "cors": "^2.8.5",
+    "crypto": "^1.0.1",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
     "lucide-react": "^0.263.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
@@ -804,6 +2363,9 @@ export default {
   },
 }
 
+=== E:\Users\Wesley\Documents\Gerenciador de Ativos\projeto_codigo.txt ===
+
+
 === E:\Users\Wesley\Documents\Gerenciador de Ativos\tailwind.config.js ===
 
 /** @type {import('tailwindcss').Config} */
@@ -824,7 +2386,6 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 
-// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
   resolve: {
@@ -832,4 +2393,19 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // Adicione esta seção de proxy
+  server: {
+    proxy: {
+      '/mexc-api': {
+        target: 'https://api.mexc.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/mexc-api/, '')
+      },
+      '/binance-api': {
+        target: 'https://api.binance.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/binance-api/, '')
+      }
+    }
+  }
 });

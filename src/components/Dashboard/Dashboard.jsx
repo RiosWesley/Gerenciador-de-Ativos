@@ -5,6 +5,7 @@ import PortfolioSummary from './PortfolioSummary';
 import AssetsBreakdown from './AssetsBreakdown';
 import PriceHistory from './PriceHistory';
 import PriceAlerts from './PriceAlerts';
+import Investments from './Investments';
 
 const Dashboard = () => {
   const [activeTab, setActiveTab] = useState('portfolio');
@@ -52,11 +53,10 @@ const Dashboard = () => {
       case 'investments':
         return (
           <div>
-            {/* Aqui será renderizado o componente de Investimentos */}
             <h2 className="text-xl font-semibold text-gray-700 mb-4">
-              Investimentos
+              Análise de Investimentos
             </h2>
-            {/* Placeholder para o componente de Investimentos */}
+            <Investments />
           </div>
         );
 

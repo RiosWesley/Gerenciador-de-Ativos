@@ -9,21 +9,36 @@ const PortfolioSummary = () => {
   const [portfolioData, setPortfolioData] = useState({
     total: 0,
     binance: 0,
-    mexc: 0
+    mexc: 0,
+    futures: 0
   });
 
   // Cores para o gráfico de pizza
-  const COLORS = ['#0088FE', '#00C49F'];
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28'];
 
   useEffect(() => {
     const fetchPortfolioData = async () => {
       try {
         const portfolioService = new PortfolioService();
+        
+        // Buscar saldos e preços
         const balances = await portfolioService.getConsolidatedBalance();
         const prices = await portfolioService.getAllPrices();
+        
+        // Calcular valores das exchanges
         const portfolio = portfolioService.calculatePortfolioValue(balances, prices);
         
-        setPortfolioData(portfolio);
+        // Buscar saldo de futuros separadamente
+        const futuresBalance = await portfolioService.getMEXCFuturesBalance();
+        
+        // Atualizar estado com valores totais
+        setPortfolioData({
+          total: portfolio.total + futuresBalance,
+          binance: portfolio.binance,
+          mexc: portfolio.mexc,
+          futures: futuresBalance
+        });
+        
         setLoading(false);
       } catch (err) {
         setError(err.message);
@@ -38,7 +53,8 @@ const PortfolioSummary = () => {
 
   const chartData = [
     { name: 'Binance', value: portfolioData.binance },
-    { name: 'MEXC', value: portfolioData.mexc }
+    { name: 'MEXC', value: portfolioData.mexc },
+    { name: 'Futuros', value: portfolioData.futures }
   ];
 
   if (loading) {
@@ -92,7 +108,7 @@ const PortfolioSummary = () => {
             </PieChart>
           </ResponsiveContainer>
         </div>
-        <div className="grid grid-cols-2 gap-2 mt-4">
+        <div className="grid grid-cols-3 gap-2 mt-4">
           <div className="flex items-center">
             <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: COLORS[0] }} />
             <span>Binance</span>
@@ -100,6 +116,10 @@ const PortfolioSummary = () => {
           <div className="flex items-center">
             <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: COLORS[1] }} />
             <span>MEXC</span>
+          </div>
+          <div className="flex items-center">
+            <div className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: COLORS[2] }} />
+            <span>Futuros</span>
           </div>
         </div>
       </div>
@@ -118,6 +138,12 @@ const PortfolioSummary = () => {
             <div className="text-sm text-gray-500">MEXC</div>
             <div className="text-xl font-semibold">
               ${portfolioData.mexc.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </div>
+          </div>
+          <div>
+            <div className="text-sm text-gray-500">Futuros MEXC</div>
+            <div className="text-xl font-semibold">
+              ${portfolioData.futures.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
             </div>
           </div>
         </div>
