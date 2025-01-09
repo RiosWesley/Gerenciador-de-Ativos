@@ -1,4 +1,4 @@
-=== Estrutura de Diret�rios ===
+=== Estrutura de Diretórios ===
 E:\Users\Wesley\Documents\Gerenciador de Ativos\.vscode
 E:\Users\Wesley\Documents\Gerenciador de Ativos\server
 E:\Users\Wesley\Documents\Gerenciador de Ativos\src
@@ -8,17 +8,10 @@ E:\Users\Wesley\Documents\Gerenciador de Ativos\src\components\Charts
 E:\Users\Wesley\Documents\Gerenciador de Ativos\src\components\Dashboard
 E:\Users\Wesley\Documents\Gerenciador de Ativos\src\components\Sidebar
 
-=== Conte�do dos Arquivos ===
+=== Conteúdo dos Arquivos ===
 
 === E:\Users\Wesley\Documents\Gerenciador de Ativos\.vscode ===
 
-
-=== E:\Users\Wesley\Documents\Gerenciador de Ativos\server\.env ===
-
-VITE_REACT_APP_BINANCE_API_KEY=BoBgkE7jCc7rlQUsk8H1M222CbeP9TSqpLPgo6DGIOq8XGo7SK2e1OZmDlUETsLC
-VITE_REACT_APP_BINANCE_API_SECRET=mi8HY4FbKPypoaT0XQDth1AqAO7dpWSahrqw8SqVnsIDn2cFm7fC6RwZq12xSSIN
-VITE_REACT_APP_MEXC_API_KEY=mx0vglaYMOKN0hkgBa
-VITE_REACT_APP_MEXC_API_SECRET=213ede477ec2407a9e9bc7b4c9963477
 
 === E:\Users\Wesley\Documents\Gerenciador de Ativos\server\package.json ===
 
@@ -71,7 +64,7 @@ const config = {
   }
 };
 
-// Função para gerar assinatura Binance
+// FunÃ§Ã£o para gerar assinatura Binance
 function generateBinanceSignature(queryString, apiSecret) {
   return crypto
     .createHmac('sha256', apiSecret)
@@ -79,9 +72,9 @@ function generateBinanceSignature(queryString, apiSecret) {
     .digest('hex');
 }
 
-// Função para gerar assinatura MEXC
+// FunÃ§Ã£o para gerar assinatura MEXC
 function generateMEXCSignature(params, apiSecret) {
-  // Garantir que todos os valores são strings
+  // Garantir que todos os valores sÃ£o strings
   const orderedParams = Object.keys(params)
     .sort()
     .reduce((obj, key) => {
@@ -159,7 +152,7 @@ app.get('/api/mexc/balance', async (req, res) => {
     console.log('Query String:', queryString);
     console.log('Signature:', signature);
 
-    // Fazer requisição com assinatura
+    // Fazer requisiÃ§Ã£o com assinatura
     const response = await axios({
       method: 'GET',
       url: `${config.mexc.baseUrl}/api/v3/account?${queryString}&signature=${signature}`,
@@ -184,7 +177,7 @@ app.get('/api/mexc/balance', async (req, res) => {
   }
 });
 
-// Endpoint para preços Binance
+// Endpoint para preÃ§os Binance
 app.get('/api/binance/prices', async (req, res) => {
   try {
     const response = await axios.get(`${config.binance.baseUrl}/api/v3/ticker/price`);
@@ -195,7 +188,7 @@ app.get('/api/binance/prices', async (req, res) => {
   }
 });
 
-// Endpoint para preços MEXC
+// Endpoint para preÃ§os MEXC
 app.get('/api/mexc/prices', async (req, res) => {
   try {
     const response = await axios.get(`${config.mexc.baseUrl}/api/v3/ticker/price`);
@@ -208,7 +201,7 @@ app.get('/api/mexc/prices', async (req, res) => {
 
 // Adicione estes endpoints ao server.js
 
-// Endpoint para histórico de trades Binance
+// Endpoint para histÃ³rico de trades Binance
 app.get('/api/binance/trades', async (req, res) => {
   try {
     const { symbol } = req.query;
@@ -253,7 +246,7 @@ app.get('/api/binance/trades', async (req, res) => {
   }
 });
 
-// Endpoint para histórico de trades MEXC
+// Endpoint para histÃ³rico de trades MEXC
 app.get('/api/mexc/trades', async (req, res) => {
   try {
     const { symbol } = req.query;
@@ -381,7 +374,7 @@ app.get('/api/mexc/futures/balance', async (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
-  console.log('Verificando variáveis de ambiente:');
+  console.log('Verificando variÃ¡veis de ambiente:');
   console.log('BINANCE_API_KEY:', config.binance.apiKey ? 'Definida' : 'Indefinida');
   console.log('BINANCE_API_SECRET:', config.binance.apiSecret ? 'Definida' : 'Indefinida');
   console.log('MEXC_API_KEY:', config.mexc.apiKey ? 'Definida' : 'Indefinida');
@@ -478,11 +471,11 @@ export const PortfolioDetails = ({ distribution, history }) => {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       <div className="bg-white p-6 rounded-xl shadow-md">
-        <h3 className="text-lg font-semibold mb-4">Distribuição do Portfólio</h3>
+        <h3 className="text-lg font-semibold mb-4">DistribuiÃ§Ã£o do PortfÃ³lio</h3>
         <DistributionChart data={distribution} />
       </div>
       <div className="bg-white p-6 rounded-xl shadow-md">
-        <h3 className="text-lg font-semibold mb-4">Histórico de Valor</h3>
+        <h3 className="text-lg font-semibold mb-4">HistÃ³rico de Valor</h3>
         <HistoryChart data={history} />
       </div>
     </div>
@@ -576,9 +569,9 @@ const AssetsBreakdown = () => {
 
   return (
     <div className="space-y-4">
-      {/* Gráfico de Barras */}
+      {/* GrÃ¡fico de Barras */}
       <div className="bg-white rounded-lg shadow p-6">
-        <div className="text-lg font-semibold mb-4">Distribuição de Ativos</div>
+        <div className="text-lg font-semibold mb-4">DistribuiÃ§Ã£o de Ativos</div>
         <div className="h-96">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={assetData}>
@@ -648,19 +641,19 @@ const Dashboard = () => {
       case 'portfolio':
         return (
           <div className="space-y-8">
-            {/* Seção de Sumário */}
+            {/* SeÃ§Ã£o de SumÃ¡rio */}
             <section>
               <h2 className="text-xl font-semibold text-gray-700 mb-4">
-                Visão Geral do Portfólio
+                VisÃ£o Geral do PortfÃ³lio
               </h2>
               <PortfolioSummary />
             </section>
 
-            {/* Grid de duas colunas para Histórico e Alertas */}
+            {/* Grid de duas colunas para HistÃ³rico e Alertas */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
               <section>
                 <h2 className="text-xl font-semibold text-gray-700 mb-4">
-                  Histórico de Preços
+                  HistÃ³rico de PreÃ§os
                 </h2>
                 <PriceHistory />
               </section>
@@ -673,7 +666,7 @@ const Dashboard = () => {
               </section>
             </div>
 
-            {/* Seção de Detalhamento */}
+            {/* SeÃ§Ã£o de Detalhamento */}
             <section>
               <h2 className="text-xl font-semibold text-gray-700 mb-4">
                 Detalhamento dos Ativos
@@ -687,7 +680,7 @@ const Dashboard = () => {
         return (
           <div>
             <h2 className="text-xl font-semibold text-gray-700 mb-4">
-              Análise de Investimentos
+              AnÃ¡lise de Investimentos
             </h2>
             <Investments />
           </div>
@@ -696,7 +689,7 @@ const Dashboard = () => {
       case 'balances':
         return (
           <div>
-            {/* Aqui será renderizado o componente de Saldos */}
+            {/* Aqui serÃ¡ renderizado o componente de Saldos */}
             <h2 className="text-xl font-semibold text-gray-700 mb-4">
               Saldos das Exchanges
             </h2>
@@ -711,7 +704,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header com Navegação */}
+      {/* Header com NavegaÃ§Ã£o */}
       <header className="bg-white shadow">
         <div className="max-w-7xl mx-auto">
           <div className="flex flex-col space-y-4 py-6 px-4 sm:px-6 lg:px-8">
@@ -719,7 +712,7 @@ const Dashboard = () => {
               Dashboard de Investimentos
             </h1>
             
-            {/* Navegação */}
+            {/* NavegaÃ§Ã£o */}
             <nav className="flex space-x-4 border-b border-gray-200">
               <button
                 onClick={() => setActiveTab('portfolio')}
@@ -729,7 +722,7 @@ const Dashboard = () => {
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                Portfólio
+                PortfÃ³lio
               </button>
               <button
                 onClick={() => setActiveTab('investments')}
@@ -761,7 +754,7 @@ const Dashboard = () => {
         {renderContent()}
       </main>
 
-      {/* Footer com informações adicionais */}
+      {/* Footer com informaÃ§Ãµes adicionais */}
       <footer className="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8">
         <p className="text-center text-sm text-gray-500">
           Dados atualizados automaticamente a cada 5 minutos
@@ -817,7 +810,7 @@ const Investments = () => {
           }
         });
 
-        // Dados simulados para exemplo - serão substituídos pelos dados reais dos trades
+        // Dados simulados para exemplo - serÃ£o substituÃ­dos pelos dados reais dos trades
         const mockData = {
           totalInvested: totalValue * 0.8, // Simular investimento inicial
           totalValue: totalValue,
@@ -897,10 +890,10 @@ const Investments = () => {
         </div>
       </div>
 
-      {/* Análise de Trades */}
+      {/* AnÃ¡lise de Trades */}
       <section>
         <h2 className="text-xl font-semibold text-gray-700 mb-4">
-          Análise Detalhada
+          AnÃ¡lise Detalhada
         </h2>
         <TradeAnalysis />
       </section>
@@ -927,7 +920,7 @@ const PortfolioSummary = () => {
     futures: 0
   });
 
-  // Cores para o gráfico de pizza
+  // Cores para o grÃ¡fico de pizza
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28'];
 
   useEffect(() => {
@@ -935,7 +928,7 @@ const PortfolioSummary = () => {
       try {
         const portfolioService = new PortfolioService();
         
-        // Buscar saldos e preços
+        // Buscar saldos e preÃ§os
         const balances = await portfolioService.getConsolidatedBalance();
         const prices = await portfolioService.getAllPrices();
         
@@ -997,9 +990,9 @@ const PortfolioSummary = () => {
         </div>
       </div>
 
-      {/* Card de Distribuição por Exchange */}
+      {/* Card de DistribuiÃ§Ã£o por Exchange */}
       <div className="bg-white rounded-lg shadow p-6">
-        <div className="text-lg font-semibold mb-2">Distribuição por Exchange</div>
+        <div className="text-lg font-semibold mb-2">DistribuiÃ§Ã£o por Exchange</div>
         <div className="h-48">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -1118,12 +1111,12 @@ const PriceAlerts = () => {
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="flex items-center gap-2">
           <Bell className="h-5 w-5" />
-          <h2 className="text-lg font-semibold">Alertas de Preço</h2>
+          <h2 className="text-lg font-semibold">Alertas de PreÃ§o</h2>
         </div>
       </div>
 
       <div className="p-6">
-        {/* Formulário para novo alerta */}
+        {/* FormulÃ¡rio para novo alerta */}
         <div className="flex gap-4 mb-6">
           <select
             value={newAlert.asset}
@@ -1148,7 +1141,7 @@ const PriceAlerts = () => {
             type="number"
             value={newAlert.price}
             onChange={(e) => setNewAlert({ ...newAlert, price: e.target.value })}
-            placeholder="Preço"
+            placeholder="PreÃ§o"
             className="bg-white border border-gray-300 rounded-md px-3 py-2"
           />
 
@@ -1228,13 +1221,13 @@ const PriceHistory = () => {
         const portfolioService = new PortfolioService();
         const balances = await portfolioService.getConsolidatedBalance();
         
-        // Obter lista única de ativos
+        // Obter lista Ãºnica de ativos
         const assets = new Set();
         balances.binance.forEach(balance => assets.add(balance.asset));
         balances.mexc.forEach(balance => assets.add(balance.asset));
         setAvailableAssets(Array.from(assets));
 
-        // Simular dados históricos
+        // Simular dados histÃ³ricos
         const now = Date.now();
         const historicalData = Array(24).fill(0).map((_, i) => ({
           timestamp: new Date(now - (23 - i) * 3600000).toISOString(),
@@ -1273,7 +1266,7 @@ const PriceHistory = () => {
   return (
     <div className="bg-white rounded-lg shadow">
       <div className="px-6 py-4 border-b border-gray-200 flex flex-row items-center justify-between">
-        <h2 className="text-lg font-semibold">Histórico de Preços</h2>
+        <h2 className="text-lg font-semibold">HistÃ³rico de PreÃ§os</h2>
         <div className="flex space-x-2">
           {/* Seletor de Ativo */}
           <select
@@ -1286,7 +1279,7 @@ const PriceHistory = () => {
             ))}
           </select>
 
-          {/* Seletor de Período */}
+          {/* Seletor de PerÃ­odo */}
           <select
             value={timeRange}
             onChange={(e) => setTimeRange(e.target.value)}
@@ -1294,7 +1287,7 @@ const PriceHistory = () => {
           >
             <option value="1d">1 Dia</option>
             <option value="1w">1 Semana</option>
-            <option value="1m">1 Mês</option>
+            <option value="1m">1 MÃªs</option>
             <option value="3m">3 Meses</option>
             <option value="1y">1 Ano</option>
           </select>
@@ -1318,7 +1311,7 @@ const PriceHistory = () => {
                 tickFormatter={(value) => `$${value.toLocaleString()}`}
               />
               <Tooltip 
-                formatter={(value) => [`$${value.toLocaleString()}`, 'Preço']}
+                formatter={(value) => [`$${value.toLocaleString()}`, 'PreÃ§o']}
                 labelFormatter={(timestamp) => new Date(timestamp).toLocaleString()}
               />
               <Line 
@@ -1332,22 +1325,22 @@ const PriceHistory = () => {
           </ResponsiveContainer>
         </div>
 
-        {/* Estatísticas do Período */}
+        {/* EstatÃ­sticas do PerÃ­odo */}
         <div className="grid grid-cols-3 gap-4 mt-4">
           <div className="text-center">
-            <div className="text-sm text-gray-500">Preço Mais Alto</div>
+            <div className="text-sm text-gray-500">PreÃ§o Mais Alto</div>
             <div className="font-semibold">
               ${Math.max(...priceData.map(d => d.price)).toLocaleString()}
             </div>
           </div>
           <div className="text-center">
-            <div className="text-sm text-gray-500">Preço Mais Baixo</div>
+            <div className="text-sm text-gray-500">PreÃ§o Mais Baixo</div>
             <div className="font-semibold">
               ${Math.min(...priceData.map(d => d.price)).toLocaleString()}
             </div>
           </div>
           <div className="text-center">
-            <div className="text-sm text-gray-500">Variação</div>
+            <div className="text-sm text-gray-500">VariaÃ§Ã£o</div>
             <div className="font-semibold">
               {((priceData[priceData.length - 1].price / priceData[0].price - 1) * 100).toFixed(2)}%
             </div>
@@ -1380,7 +1373,7 @@ const TradeAnalysis = () => {
         const portfolioService = new PortfolioService();
         const analysisService = new InvestmentAnalysisService();
         
-        // Buscar dados necessários
+        // Buscar dados necessÃ¡rios
         const balances = await portfolioService.getConsolidatedBalance();
         const prices = await portfolioService.getAllPrices();
         const assetsMetrics = [];
@@ -1433,7 +1426,7 @@ const TradeAnalysis = () => {
           }
         }
 
-        // Calcular métricas do portfolio completo
+        // Calcular mÃ©tricas do portfolio completo
         const portfolio = analysisService.calculatePortfolioMetrics(assetsMetrics);
 
         setAnalysisData(assetsMetrics);
@@ -1523,7 +1516,7 @@ const TradeAnalysis = () => {
       {/* Asset Analysis */}
       <div className="bg-white rounded-lg shadow">
         <div className="p-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold">Análise por Ativo</h3>
+          <h3 className="text-lg font-semibold">AnÃ¡lise por Ativo</h3>
         </div>
         <div className="divide-y">
           {analysisData.map((asset) => (
@@ -1544,9 +1537,9 @@ const TradeAnalysis = () => {
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {/* Preço Médio */}
+                {/* PreÃ§o MÃ©dio */}
                 <div>
-                  <div className="text-sm text-gray-500">Preço Médio de Compra</div>
+                  <div className="text-sm text-gray-500">PreÃ§o MÃ©dio de Compra</div>
                   <div className="font-medium">
                     ${asset.metrics.averageBuyPrice.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </div>
@@ -1563,9 +1556,9 @@ const TradeAnalysis = () => {
                   </div>
                 </div>
 
-                {/* Lucro/Prejuízo */}
+                {/* Lucro/PrejuÃ­zo */}
                 <div>
-                  <div className="text-sm text-gray-500">Lucro/Prejuízo Total</div>
+                  <div className="text-sm text-gray-500">Lucro/PrejuÃ­zo Total</div>
                   <div className={`font-medium flex items-center gap-1 ${
                     asset.metrics.totalProfit >= 0 ? 'text-green-600' : 'text-red-600'
                   }`}>
@@ -1593,7 +1586,7 @@ const TradeAnalysis = () => {
               {/* Detalhes Adicionais */}
               <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-gray-100">
                 <div>
-                  <div className="text-sm text-gray-500">Faixa de Preço</div>
+                  <div className="text-sm text-gray-500">Faixa de PreÃ§o</div>
                   <div className="text-sm">
                     <span className="text-green-600">Alta: ${asset.priceRange.highest.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                     <br />
@@ -1649,7 +1642,7 @@ const Sidebar = () => {
         </a>
         <a href="#" className="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100">
           <CogIcon className="w-5 h-5 mr-2" />
-          Configurações
+          ConfiguraÃ§Ãµes
         </a>
       </nav>
     </div>
@@ -1677,7 +1670,7 @@ class BinanceService {
     }
 
     /**
-     * Obtém o saldo de todas as moedas da conta
+     * ObtÃ©m o saldo de todas as moedas da conta
      * @returns {Promise} Promise com array de saldos
      */
     async getAccountBalance() {
@@ -1703,22 +1696,22 @@ class BinanceService {
     }
 
     /**
-     * Obtém os preços atuais de todas as moedas
-     * @returns {Promise} Promise com array de preços
+     * ObtÃ©m os preÃ§os atuais de todas as moedas
+     * @returns {Promise} Promise com array de preÃ§os
      */
     async getCurrentPrices() {
         try {
             const response = await this.client.get('/ticker/price');
             return response.data;
         } catch (error) {
-            console.error('Erro ao buscar preços:', error);
+            console.error('Erro ao buscar preÃ§os:', error);
             throw error;
         }
     }
 
     /**
-     * Gera a assinatura para autenticação
-     * @param {string} queryString - String de parâmetros da query
+     * Gera a assinatura para autenticaÃ§Ã£o
+     * @param {string} queryString - String de parÃ¢metros da query
      * @returns {string} Assinatura HMAC SHA256
      */
     generateSignature(queryString) {
@@ -1737,15 +1730,15 @@ export default BinanceService;
 // src/services/investmentAnalysisService.js
 class InvestmentAnalysisService {
   /**
-   * Calcula métricas detalhadas de investimento para um ativo
+   * Calcula mÃ©tricas detalhadas de investimento para um ativo
    * @param {Array} trades - Array de trades do ativo
-   * @param {number} currentPrice - Preço atual do ativo
+   * @param {number} currentPrice - PreÃ§o atual do ativo
    * @param {number} currentHoldings - Quantidade atual do ativo
-   * @returns {Object} Métricas calculadas
+   * @returns {Object} MÃ©tricas calculadas
    */
   calculateInvestmentMetrics(trades, currentPrice, currentHoldings) {
         if (!trades || !Array.isArray(trades)) {
-            console.warn('Trades inválidos:', trades);
+            console.warn('Trades invÃ¡lidos:', trades);
             trades = [];
         }
 
@@ -1783,7 +1776,7 @@ class InvestmentAnalysisService {
             }
         });
 
-        // Calcular preço médio ponderado das compras
+        // Calcular preÃ§o mÃ©dio ponderado das compras
         const averageBuyPrice = totalBought > 0 ? totalSpentBuying / totalBought : 0;
 
         // Calcular lucro realizado usando FIFO
@@ -1819,15 +1812,15 @@ class InvestmentAnalysisService {
             remainingQuantity += trade.quantity;
         });
 
-        // Se ainda temos holdings mas não temos trades suficientes,
-        // usar o preço médio de compra para o restante
+        // Se ainda temos holdings mas nÃ£o temos trades suficientes,
+        // usar o preÃ§o mÃ©dio de compra para o restante
         if (currentHoldings > remainingQuantity) {
             const extraQuantity = currentHoldings - remainingQuantity;
             remainingCost += extraQuantity * averageBuyPrice;
             remainingQuantity = currentHoldings;
         }
 
-        // Calcular preço médio atual
+        // Calcular preÃ§o mÃ©dio atual
         const averageCost = remainingQuantity > 0 ? remainingCost / remainingQuantity : averageBuyPrice;
 
         // Calcular valor e lucro atual
@@ -1839,14 +1832,14 @@ class InvestmentAnalysisService {
         const totalInvested = currentHoldings * averageCost;
         const roi = totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0;
 
-        // Análise de preços
+        // AnÃ¡lise de preÃ§os
         const prices = sortedTrades.map(t => parseFloat(t.price));
         const highestPrice = Math.max(...prices, currentPrice);
         const lowestPrice = Math.min(...prices);
         const priceVolatility = lowestPrice > 0 ? ((highestPrice - lowestPrice) / lowestPrice) * 100 : 0;
 
         // Debug info
-        console.log(`Análise para holdings: ${currentHoldings}`, {
+        console.log(`AnÃ¡lise para holdings: ${currentHoldings}`, {
             totalBought,
             totalSpentBuying,
             averageBuyPrice,
@@ -1861,8 +1854,8 @@ class InvestmentAnalysisService {
             currentHoldings,
             currentValue,
             metrics: {
-                averageCost,            // Preço médio atual considerando holdings
-                averageBuyPrice,        // Preço médio de todas as compras
+                averageCost,            // PreÃ§o mÃ©dio atual considerando holdings
+                averageBuyPrice,        // PreÃ§o mÃ©dio de todas as compras
                 currentPrice,
                 totalInvested,
                 realizedProfit,
@@ -1890,13 +1883,13 @@ class InvestmentAnalysisService {
     }
 
   /**
-   * Calcula métricas agregadas do portfolio
-   * @param {Array} assetsMetrics - Array de métricas de cada ativo
-   * @param {number} minValueFilter - Valor mínimo em USD para incluir o ativo
-   * @returns {Object} Métricas agregadas do portfolio
+   * Calcula mÃ©tricas agregadas do portfolio
+   * @param {Array} assetsMetrics - Array de mÃ©tricas de cada ativo
+   * @param {number} minValueFilter - Valor mÃ­nimo em USD para incluir o ativo
+   * @returns {Object} MÃ©tricas agregadas do portfolio
    */
   calculatePortfolioMetrics(assetsMetrics, minValueFilter = 5) {
-      // Filtra ativos com valor mínimo
+      // Filtra ativos com valor mÃ­nimo
       const filteredAssets = assetsMetrics.filter(asset => 
           asset.currentValue >= minValueFilter
       );
@@ -1959,7 +1952,7 @@ class MEXCService {
     }
 
     /**
-     * Obtém o saldo de todas as moedas da conta
+     * ObtÃ©m o saldo de todas as moedas da conta
      * @returns {Promise} Promise com array de saldos
      */
     async getAccountBalance() {
@@ -1985,23 +1978,23 @@ class MEXCService {
     }
 
     /**
-     * Obtém os preços atuais de todas as moedas
-     * @returns {Promise} Promise com array de preços
+     * ObtÃ©m os preÃ§os atuais de todas as moedas
+     * @returns {Promise} Promise com array de preÃ§os
      */
     async getCurrentPrices() {
         try {
             const response = await this.client.get('/ticker/price');
             return response.data;
         } catch (error) {
-            console.error('Erro ao buscar preços MEXC:', error);
+            console.error('Erro ao buscar preÃ§os MEXC:', error);
             throw error;
         }
     }
 
     /**
-     * Obtém o histórico de trades
+     * ObtÃ©m o histÃ³rico de trades
      * @param {string} symbol - Par de trading (ex: 'BTCUSDT')
-     * @param {number} limit - Número de registros (default: 500, max: 1000)
+     * @param {number} limit - NÃºmero de registros (default: 500, max: 1000)
      * @returns {Promise} Promise com array de trades
      */
     async getTradeHistory(symbol, limit = 500) {
@@ -2021,14 +2014,14 @@ class MEXCService {
             
             return response.data;
         } catch (error) {
-            console.error('Erro ao buscar histórico de trades MEXC:', error);
+            console.error('Erro ao buscar histÃ³rico de trades MEXC:', error);
             throw error;
         }
     }
 
     /**
-     * Gera a assinatura para autenticação
-     * @param {string} queryString - String de parâmetros da query
+     * Gera a assinatura para autenticaÃ§Ã£o
+     * @param {string} queryString - String de parÃ¢metros da query
      * @returns {string} Assinatura HMAC SHA256
      */
     generateSignature(queryString) {
@@ -2077,13 +2070,13 @@ class PortfolioService {
     }
   }
 
-  // Buscar preços atualizados
+  // Buscar preÃ§os atualizados
   async getBinancePrices() {
     try {
       const response = await axios.get(`${this.baseUrl}/binance/prices`);
       return response.data;
     } catch (error) {
-      console.error('Erro ao buscar preços Binance:', error);
+      console.error('Erro ao buscar preÃ§os Binance:', error);
       return [];
     }
   }
@@ -2093,7 +2086,7 @@ class PortfolioService {
       const response = await axios.get(`${this.baseUrl}/mexc/prices`);
       return response.data;
     } catch (error) {
-      console.error('Erro ao buscar preços MEXC:', error);
+      console.error('Erro ao buscar preÃ§os MEXC:', error);
       return [];
     }
   }
@@ -2116,7 +2109,7 @@ class PortfolioService {
     }
   }
 
-  // Buscar todos os preços
+  // Buscar todos os preÃ§os
   async getAllPrices() {
     const [binancePrices, mexcPrices] = await Promise.allSettled([
       this.getBinancePrices(),
@@ -2129,7 +2122,7 @@ class PortfolioService {
     };
   }
 
-  // Calcular valor do portfólio
+  // Calcular valor do portfÃ³lio
   calculatePortfolioValue(balances, prices) {
     try {
       let totalBinance = 0;
@@ -2163,12 +2156,12 @@ class PortfolioService {
         mexc: totalMEXC
       };
     } catch (error) {
-      console.error('Erro ao calcular valor do portfólio:', error);
+      console.error('Erro ao calcular valor do portfÃ³lio:', error);
       return { total: 0, binance: 0, mexc: 0 };
     }
   }
 
-  // Método para buscar saldo de futuros
+  // MÃ©todo para buscar saldo de futuros
   async getMEXCFuturesBalance() {
     try {
       const response = await axios.get(`${this.baseUrl}/mexc/futures/balance`);
@@ -2196,7 +2189,7 @@ class PortfolioService {
     }
   }
 
-  // Métodos adicionais mantidos na íntegra
+  // MÃ©todos adicionais mantidos na Ã­ntegra
   async getBinanceTradeHistory(symbol) {
     try {
       const response = await axios.get(`${this.baseUrl}/binance/trades`, {
@@ -2204,7 +2197,7 @@ class PortfolioService {
       });
       return response.data;
     } catch (error) {
-      console.error('Erro ao buscar histórico Binance:', error);
+      console.error('Erro ao buscar histÃ³rico Binance:', error);
       return [];
     }
   }
@@ -2216,7 +2209,7 @@ class PortfolioService {
       });
       return response.data;
     } catch (error) {
-      console.error('Erro ao buscar histórico MEXC:', error);
+      console.error('Erro ao buscar histÃ³rico MEXC:', error);
       return [];
     }
   }
@@ -2232,7 +2225,7 @@ class PortfolioService {
     let totalQuantity = 0;
     let totalCost = 0;
 
-    // Calcular preço médio ponderado
+    // Calcular preÃ§o mÃ©dio ponderado
     trades.forEach(trade => {
       const quantity = parseFloat(trade.qty);
       const price = parseFloat(trade.price);
@@ -2393,7 +2386,7 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
-  // Adicione esta seção de proxy
+  // Adicione esta seÃ§Ã£o de proxy
   server: {
     proxy: {
       '/mexc-api': {
